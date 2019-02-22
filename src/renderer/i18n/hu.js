@@ -94,7 +94,11 @@ const Hungarian = {
     dualUse: "Nyomvatartáskor módosító, normál gomb egyébként",
     dualUseLayer: "Nyomvatartáskor réteg váltó, normál gomb egyébként",
     layoutMode: "Billentyűzetkiosztás szerkesztése",
-    colormapMode: "Színtérkép szerkesztése"
+    colormapMode: "Színtérkép szerkesztése",
+    importExport: "Aktuális réteg importálása/exportálása",
+    keymap: "Billentyűzetkiosztás",
+    colormap: "Színtérkép",
+    palette: "Paletta"
   },
   preferences: {
     devtools: "Fejlesztői eszközök",

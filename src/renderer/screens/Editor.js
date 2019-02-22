@@ -28,6 +28,7 @@ import FileCopyIcon from "@material-ui/icons/FileCopy";
 import FormControl from "@material-ui/core/FormControl";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import IconButton from "@material-ui/core/IconButton";
+import ImportExportIcon from "@material-ui/icons/ImportExport";
 import KeyboardIcon from "@material-ui/icons/Keyboard";
 import LinearProgress from "@material-ui/core/LinearProgress";
 import List from "@material-ui/core/List";
@@ -40,6 +41,7 @@ import PaletteIcon from "@material-ui/icons/Palette";
 import Portal from "@material-ui/core/Portal";
 import Select from "@material-ui/core/Select";
 import Slide from "@material-ui/core/Slide";
+import TextField from "@material-ui/core/TextField";
 import ToggleButton from "@material-ui/lab/ToggleButton";
 import ToggleButtonGroup from "@material-ui/lab/ToggleButtonGroup";
 import Toolbar from "@material-ui/core/Toolbar";
@@ -108,6 +110,94 @@ const ConfirmationDialog = props => {
         </Button>
         <Button onClick={props.onConfirm} color="primary">
           {i18n.dialog.ok}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const ImportExportDialog = props => {
+  const [keymapState, setKeymap] = useState();
+  const [colormapState, setColormap] = useState();
+  const [paletteState, setPalette] = useState();
+
+  const keymap =
+    keymapState != undefined
+      ? keymapState
+      : JSON.stringify(props.keymap, null, 2);
+
+  const colormap =
+    colormapState != undefined
+      ? colormapState
+      : JSON.stringify(props.colormap, null, 2);
+
+  const palette =
+    paletteState != undefined
+      ? paletteState
+      : JSON.stringify(props.palette, null, 2);
+
+  const onConfirm = () => {
+    props.onConfirm(
+      JSON.parse(keymap),
+      JSON.parse(colormap),
+      JSON.parse(palette)
+    );
+  };
+
+  return (
+    <Dialog
+      disableBackdropClick
+      open={props.open}
+      onClose={props.onCancel}
+      fullWidth
+    >
+      <DialogTitle>{i18n.editor.importExport}</DialogTitle>
+      <DialogContent>
+        <TextField
+          disabled={props.isReadOnly}
+          label={i18n.editor.keymap}
+          multiline
+          fullWidth
+          rowsMax="6"
+          value={keymap}
+          onChange={event => {
+            setKeymap(event.target.value);
+          }}
+          margin="normal"
+        />
+        {props.colormap.length > 0 && (
+          <TextField
+            label={i18n.editor.colormap}
+            multiline
+            fullWidth
+            rowsMax="6"
+            value={colormap}
+            onChange={event => {
+              setColormap(event.target.value);
+            }}
+            margin="normal"
+          />
+        )}
+        {props.palette.length > 0 && (
+          <TextField
+            label={i18n.editor.palette}
+            multiline
+            fullWidth
+            rowsMax="6"
+            value={palette}
+            onChange={event => {
+              setPalette(event.target.value);
+            }}
+            margin="normal"
+          />
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button color="primary" onClick={props.onCancel}>
+          Cancel
+        </Button>
+        <Button color="primary" onClick={onConfirm}>
+          Ok
         </Button>
       </DialogActions>
     </Dialog>
@@ -189,7 +279,8 @@ class Editor extends React.Component {
     colorMap: [],
     mode: "layout",
     clearConfirmationOpen: false,
-    copyFromOpen: false
+    copyFromOpen: false,
+    importExportDialogOpen: false
   };
   keymapDB = new KeymapDB();
 
@@ -486,6 +577,60 @@ class Editor extends React.Component {
     this.props.startContext();
   };
 
+  importExportDialog = () => {
+    this.setState({ importExportDialogOpen: true });
+  };
+  cancelImport = () => {
+    this.setState({ importExportDialogOpen: false });
+  };
+  importLayer = (keymap, colormap, palette) => {
+    if (colormap.length > 0) this.setState({ colorMap: colormap });
+    if (palette.length > 0) this.setState({ palette: palette });
+    if (keymap.length > 0) {
+      const { currentLayer } = this.state;
+      if (this.state.keymap.onlyCustom) {
+        if (currentLayer >= 0) {
+          this.setState(state => {
+            let newKeymap = this.state.keymap.custom[currentLayer].slice();
+            newKeymap[currentLayer] = keymap.slice();
+            console.log(currentLayer, newKeymap);
+            return {
+              keymap: {
+                default: state.keymap.default,
+                custom: newKeymap,
+                onlyCustom: state.keymap.onlyCustom
+              }
+            };
+          });
+        }
+      } else {
+        if (currentLayer >= this.state.keymap.default.length) {
+          this.setState(state => {
+            const defLength = this.state.keymap.default.length;
+            let newKeymap = this.state.keymap.custom[
+              currentLayer - defLength
+            ].slice();
+            newKeymap[currentLayer - defLength] = keymap;
+
+            return {
+              keymap: {
+                default: state.keymap.default,
+                custom: newKeymap,
+                onlyCustom: state.keymap.onlyCustom
+              }
+            };
+          });
+        }
+      }
+    }
+
+    this.setState({
+      modified: true,
+      importExportDialogOpen: false
+    });
+    this.props.startContext();
+  };
+
   render() {
     const { classes } = this.props;
     const { keymap, palette } = this.state;
@@ -630,6 +775,11 @@ class Editor extends React.Component {
             </FormControl>
             <div className={classes.grow} />
             <div>
+              <Tooltip title={i18n.editor.importExport}>
+                <IconButton onClick={this.importExportDialog}>
+                  <ImportExportIcon />
+                </IconButton>
+              </Tooltip>
               <Tooltip title={i18n.editor.copyFrom}>
                 <IconButton disabled={isReadOnly} onClick={this.copyFromDialog}>
                   <FileCopyIcon />
@@ -685,6 +835,15 @@ class Editor extends React.Component {
           onCancel={this.cancelCopyFrom}
           layers={copyFromLayerOptions}
           currentLayer={currentLayer}
+        />
+        <ImportExportDialog
+          open={this.state.importExportDialogOpen}
+          keymap={layerData}
+          palette={this.state.palette}
+          colormap={this.state.colorMap}
+          isReadOnly={isReadOnly}
+          onConfirm={this.importLayer}
+          onCancel={this.cancelImport}
         />
       </React.Fragment>
     );

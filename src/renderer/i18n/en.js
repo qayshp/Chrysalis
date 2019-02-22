@@ -94,7 +94,11 @@ const English = {
     dualUse: "Modifier when held, normal key otherwise",
     dualUseLayer: "Layer shift when held, normal key otherwise",
     layoutMode: "Edit the keyboard layout",
-    colormapMode: "Edit the colormap"
+    colormapMode: "Edit the colormap",
+    importExport: "Import/Export the current layer",
+    keymap: "Keymap",
+    colormap: "Colormap",
+    palette: "Palette"
   },
   preferences: {
     devtools: "Developer tools",
